@@ -10,7 +10,7 @@ object Dependencies {
 		"Mvn"                       at "http://mvnrepository.com/artifact"  // for commons_exec
 	)
 
-	def compile   (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "compile")
+	def xcompile  (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "compile")  // 'xcompile' so as not to break mutli-jvm stuff
 	def provided  (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "provided")
 	def test      (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "test") 
 	def runtime   (deps: ModuleID*): Seq[ModuleID] = deps map (_ % "runtime")
@@ -24,10 +24,12 @@ object Dependencies {
 	val akka_slf4j 		= "com.typesafe.akka" 		% "akka-slf4j_2.11"		% AKKA_VER
 	val akka_remote		= "com.typesafe.akka" 		% "akka-remote_2.11"	% AKKA_VER
 	val akka_cluster	= "com.typesafe.akka" 		% "akka-cluster_2.11" 	% AKKA_VER
+	val multijvm        = "com.typesafe.akka"       %% "akka-multi-node-testkit" % "2.3.2"  // 2.3.3 isn't ready yet!
 	val spray_can		= "io.spray"				%% "spray-can" 			% SPRAY_VER
 	val spray_client	= "io.spray"				%% "spray-client"		% SPRAY_VER
 	val spray_routing	= "io.spray"				%% "spray-routing"		% SPRAY_VER
 	val spray_caching	= "io.spray"				%% "spray-caching"		% SPRAY_VER
+
 	// val commons_codec	= "commons-codec"			% "commons-codec"       % "1.8"
 	// val commons_lang	= "commons-lang"			% "commons-lang"        % "2.6"
 	// val commons_exec	= "org.apache.commons" 		% "commons-exec"        % "1.2"
@@ -42,6 +44,6 @@ object Dependencies {
 
 	// val prettytime		= "org.ocpsoft.prettytime"	% "prettytime"			% "3.2.1.Final"
 
-	val scalatest 		= "org.scalatest" 			% "scalatest_2.10"		% "2.0"
-	// val slf4j_simple 	= "org.slf4j" 				% "slf4j-simple" 		% "1.7.5"
+	val scalatest 		= "org.scalatest" 			%% "scalatest"			% "2.2.0"
+	val slf4j_simple 	= "org.slf4j" 				% "slf4j-simple" 		% "1.7.5"
 }

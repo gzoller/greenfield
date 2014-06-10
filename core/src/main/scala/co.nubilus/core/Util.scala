@@ -1,5 +1,5 @@
 package co.nubilus
-package roots.util
+package core
 
 import scala.util.Try
 import java.io._
