@@ -1,7 +1,7 @@
 package co.nubilus
 package roots
 
-import util._
+import core._
 import spray.routing._
 import Directives._
 import akka.actor.ActorSystem
@@ -32,7 +32,7 @@ trait Pod extends Lifecycle with HealthMonitor with Stats with Versions with Sim
 
 	private[roots] def start( config:Config ) = {
 
-		// Start an ActorSystem.  Don't use roots' ActorSystem!  That's only for low-level communication.
+		// Start an ActorSystem if needed.  Don't use roots' ActorSystem!  That's only for low-level communication.
 		implicit val systemCred = system.allowAssignment 
 		system := ActorSystem( config.getString("cluster-name"), config )
 

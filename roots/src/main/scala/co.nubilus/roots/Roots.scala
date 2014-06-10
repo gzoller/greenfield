@@ -1,9 +1,9 @@
 package co.nubilus
 package roots
 
-import util._
+import core._
 import com.typesafe.config.ConfigFactory
-import akka.actor.{Actor, ActorSystem}
+import akka.actor.{Actor, ActorSystem, Props}
 import java.net.{URL, URLClassLoader}
 import scala.collection.JavaConversions._
 import scala.util.Try
@@ -22,6 +22,7 @@ trait Roots {
 	def digestConfig() = {
 		val cfg      = ConfigFactory.load
 		val system   = ActorSystem( cfg.getString("cluster-name"), cfg )
+		system.actorOf( Props(new RootsActor( this )), "roots" )
 		val ref      = system.actorSelection( cfg.getString("ecos-uri" ) )
 		(system, ref)
 	}
@@ -66,9 +67,11 @@ class RootsActor( roots:Roots ) extends Actor {
 						if( !roots.setPod(p, lvs) ) 
 							sender ! ErrorMsg("Attempted to set Pod "+p.name+"/"+p.version+" but Pod "+roots.pod.name+"/"+roots.pod.version+" was already set.")
 						else
-							pod.start( config )
+							p.start( config )
 					}
 				)
 			)
+
+		// case "ping" => 	println("Ping received!")
 	}
 }

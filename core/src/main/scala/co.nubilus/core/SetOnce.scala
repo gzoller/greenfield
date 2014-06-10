@@ -1,5 +1,5 @@
 package co.nubilus
-package roots.util
+package core
 
 import annotation._
 import scala.language.implicitConversions
@@ -15,7 +15,7 @@ class SetOnce[T] {
 	private[this] var value: Option[T] = None
 
 	def isSet = value.isDefined
-	def ensureSet { if (value.isEmpty) throwISE("uninitialized value") }
+	def ensureSet() { if (value.isEmpty) throwISE("uninitialized value") }
 	def apply() = { ensureSet; value.get }
 
 	def :=(finalValue: T)(implicit credential: SetOnceCredential) {

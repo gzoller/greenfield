@@ -5,22 +5,46 @@ import sbtassembly.Plugin.AssemblyKeys._
 import sbtbuildinfo.Plugin._
 import scala.Some
 
+import com.typesafe.sbt.SbtMultiJvm
+import com.typesafe.sbt.SbtMultiJvm.MultiJvmKeys.{MultiJvm, jvmOptions}
+
 object Build extends Build {
 
 import Dependencies._
 
+	val myHost = java.net.InetAddress.getLocalHost.getHostAddress
+
 	lazy val basicSettings = Seq(
-		organization 				:= "com.bottlerocketapps",
-		description 				:= "Web service component for the AWE mobile app",
-		startYear 					:= Some(2014),
+		// organization 				:= "com.bottlerocketapps",
+		// description 				:= "Web service component for the AWE mobile app",
+		//startYear 					:= Some(2014),
 		// licenses 					:= Seq("Apache 2" -> new URL("http://www.apache.org/licenses/LICENSE-2.0.txt")),
 		scalaVersion 				:= "2.11.1",
-		parallelExecution in Test 	:= false,
-		fork in Test                := true,
+		//parallelExecution in Test 	:= false,
+		//fork in Test                := true,
 		resolvers ++= Dependencies.resolutionRepos,
-		scalacOptions				:= Seq("-feature", "-deprecation", "-encoding", "UTF8", "-unchecked"),
+		scalacOptions				:= Seq(
+										"-feature", 
+										"-Xlint",
+										"-deprecation", 
+										"-encoding", "UTF8", 
+										"-unchecked"),
 		assembleArtifact in packageScala := false,
-		testOptions in Test += Tests.Argument("-oDF"),
+		testOptions in Test         += Tests.Argument("-oDF"),
+		// javaOptions in Test         := Seq("-DmyIp="+myHost, "-XX:MaxPermSize=256M"),
+		// jvmOptions in MultiJvm      := Seq("-DmyIp="+myHost, "-XX:MaxPermSize=256M"),
+		// libraryDependencies         ++= Seq(multijvm),
+		// executeTests in Test        <<= (executeTests in Test, executeTests in MultiJvm) map {
+		// 	case (testResults, multiNodeResults) =>
+		// 		val overall =
+		// 			if( testResults.overall.id< multiNodeResults.overall.id )
+		// 				multiNodeResults.overall
+		// 			else
+		// 				testResults.overall
+		// 		Tests.Output(overall,
+		// 				testResults.events ++ multiNodeResults.events,
+		// 				testResults.summaries ++ multiNodeResults.summaries)
+		// },
 
 		version                     := "0.1.0"
 
@@ -36,10 +60,29 @@ import Dependencies._
 	lazy val buildSettings = buildInfoSettings ++ Seq(
 		sourceGenerators in Compile <+= buildInfo,
 		buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion),
-		buildInfoPackage := "co.nubilus.roots"
+		buildInfoPackage := "co.nubilus"
 		)
 
-	// configure prompt to show current project
+	lazy val multiJvmSettings = SbtMultiJvm.multiJvmSettings ++ Seq(
+		// make sure that MultiJvm test are compiled by the default test compilation
+		compile in MultiJvm <<= (compile in MultiJvm) triggeredBy (compile in Test),
+		// disable parallel tests
+		parallelExecution in Test := false,
+		// make sure that MultiJvm tests are executed by the default test target
+		executeTests in Test <<= (executeTests in Test, executeTests in MultiJvm) map {
+				case (testResults, multiNodeResults) =>
+					val overall =
+						if( testResults.overall.id< multiNodeResults.overall.id )
+							multiNodeResults.overall
+						else
+							testResults.overall
+					Tests.Output(overall,
+							testResults.events ++ multiNodeResults.events,
+							testResults.summaries ++ multiNodeResults.summaries)
+			}
+		)
+
+  	// configure prompt to show current project
 	override lazy val settings = super.settings :+ {
 		shellPrompt := { s => Project.extract(s).currentProject.id + " > " }
 	}
@@ -59,12 +102,34 @@ import Dependencies._
 	// 					// jarName in assembly <<= (scalaVersion, version) map { (scalaVersion, version) => "core-deps_" + scalaVersion.dropRight(2) + "-" + version + ".jar" }
 	// 				)) aggregate(core)
 
-	lazy val roots = Project("roots", file("roots"))
-		.settings(basicSettings: _*)
-		.settings(buildSettings: _*)
-		.settings(libraryDependencies ++=
-			// compile(spray_routing, spray_client, spray_can, spray_caching, akka_actor) ++
-			compile(akka_actor, spray_routing, spray_can) ++
-			test(scalatest, spray_client)
+	lazy val core = Project(
+		"core", 
+		file("core"),
+		settings = basicSettings ++ (libraryDependencies ++=
+			// xcompile(akka_actor, spray_routing, spray_can) ++
+			test(scalatest)
 		)
+	)
+
+	// lazy val ecos = Project(
+	// 	"ecos", 
+	// 	file("ecos"),
+	// 	settings = basicSettings ++ (libraryDependencies ++=
+	// 		xcompile(akka_actor, spray_routing, spray_can) ++
+	// 		test(scalatest)
+	// 	)
+	// ).dependsOn( core )
+
+	lazy val roots = Project(
+		"roots", 
+		file("roots"),
+		settings = basicSettings ++ buildSettings ++ multiJvmSettings 
+			++ Seq( jvmOptions in MultiJvm += "-DmyIp="+myHost)
+			++ (libraryDependencies ++=
+			xcompile(akka_actor, spray_routing, spray_can, akka_cluster) ++
+			test(scalatest, spray_client, multijvm, akka_cluster, akka_slf4j, slf4j_simple)
+		),
+		configurations = Configurations.default :+ MultiJvm
+	).dependsOn( core )
+
 }

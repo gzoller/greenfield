@@ -1,0 +1,15 @@
+<configuration>
+
+	<!-- Disable initial logback output for test only... not recommended to include this line in production! -->
+	<statusListener class="ch.qos.logback.core.status.NopStatusListener" />
+
+	<appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+		<encoder>
+			<pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+		</encoder>
+	</appender>
+
+	<root level="ERROR">  
+		<appender-ref ref="STDOUT" />
+	</root>
+</configuration>
