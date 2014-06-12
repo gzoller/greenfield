@@ -92,28 +92,28 @@ import Dependencies._
 	lazy val roots = Project(
 		"roots", 
 		file("roots"),
-		settings = basicSettings ++ buildSettings ++ multiJvmSettings 
+		settings = basicSettings ++ buildSettings 
 			++ Seq( 
-				jvmOptions in MultiJvm += "-DmyIp="+myHost,
 				version                := "0.1.0"
 				)
 			++ (libraryDependencies ++=
 				xcompile(scalautils, akka_actor, spray_routing, spray_can, akka_cluster) ++
-				test(scalatest, spray_client, multijvm, akka_cluster, akka_slf4j, slf4j_simple)
-			),
-		configurations = Configurations.default :+ MultiJvm
+				test(scalatest, spray_client, akka_cluster, akka_slf4j, slf4j_simple)
+			)
 	).dependsOn( core )
 
 	lazy val ecos = Project(
 		"ecos", 
 		file("ecos"),
-		settings = basicSettings 
+		settings = basicSettings ++ buildSettings ++ multiJvmSettings  
 			++ Seq(
+				jvmOptions in MultiJvm += "-DmyIp="+myHost,
 				version                := "0.2.0"
 				)
 			++ (libraryDependencies ++=
 				xcompile(akka_actor, spray_routing, spray_can) ++
-				test(scalatest)
-			)
+				test(scalatest, multijvm, akka_slf4j, slf4j_simple)
+			),
+		configurations = Configurations.default :+ MultiJvm
 	).dependsOn( core, roots )
 }

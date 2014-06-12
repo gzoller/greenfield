@@ -1,6 +1,7 @@
 package co.nubilus
-package roots
+package ecos
 
+import roots._
 import org.scalatest._
 import org.scalatest.Matchers._
 import akka.actor.ActorSelection

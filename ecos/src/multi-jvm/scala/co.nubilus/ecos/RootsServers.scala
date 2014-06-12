@@ -1,6 +1,7 @@
 package co.nubilus
-package roots
+package ecos
 
+import roots._
 import com.typesafe.config.ConfigFactory
 import akka.actor._
 
@@ -15,7 +16,7 @@ case class TestRoots() extends Roots {
 }
 
 case class TestRoots2() extends Roots {
-	override val actor : Props = Props(new TestEcosActor(this))
+	override val actor : Props = Props(new EcosTestActor(null,this))
 	override def digestConfig(a:Props) = {
 		val cfg      = ConfigFactory.load("roots2.conf")
 		val system   = ActorSystem( "roots", cfg )

@@ -1,12 +1,12 @@
 package co.nubilus
-package roots
+package ecos
 
+import roots._
 import akka.actor.Actor
-
 import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class TestEcosActor( roots:Roots ) extends RootsActor(roots) {
+class EcosTestActor( ecos:EcosPod, roots:Roots ) extends EcosRootsActor(ecos, roots) {
 
 	def rec2 : Actor.Receive = {
 		case "yin" => sender ! "yang"  //println("Ping received!!!")
