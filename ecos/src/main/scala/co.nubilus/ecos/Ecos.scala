@@ -1,25 +1,23 @@
 package co.nubilus
 package ecos
 
-import core._
-import akka.actor.Props
+import roots._
+import com.typesafe.config.ConfigFactory
+import akka.actor.{Actor, ActorSystem, Props}
 
-trait Ecos extends Server {
-	val version = Version("platform:ecos",BuildInfo.version)
-	system.actorOf( Props(new EcosActor(this)) )
-}
+object Ecos extends App {
 
-/*
-// Messages
-case class ErrorMsg( msg:String, host:String = Util.myHost )
-case class PodMsg( version:Version, cfg:String )
-*/
+	case class EcosServer() extends Roots {
+		println("----------------------------------------")
+		println( "Ecos Server" )
+		println( "version "+this.version.ver)
+		println( "Started!" )
+		println("----------------------------------------")
 
-class EcosActor( ecos:Ecos ) extends Actor {
+		setPod(new EcosPod(), List(leaves.EcosLeafv1()))
 
-	def receive = {
-
-		case "ping" => sender ! "pong"
-
+		override val actor = Props(new EcosRootsActor( pod.asInstanceOf[EcosPod], this ))
 	}
+	val server = EcosServer()
+
 }

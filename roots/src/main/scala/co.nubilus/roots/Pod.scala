@@ -23,10 +23,8 @@ trait Pod extends Lifecycle with HealthMonitor with Stats with Versions with Sim
 		// Credentials for set-once values
 		implicit val rootsCred  = roots.allowAssignment  // credentials allowing setting of roots
 		implicit val leavesCred = leaves.allowAssignment // credentials allowing setting of leaves
-
 		roots  := r
 		leaves := lvs
-
 		preStartup( r )
 	}
 

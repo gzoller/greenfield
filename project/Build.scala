@@ -15,13 +15,7 @@ import Dependencies._
 	val myHost = java.net.InetAddress.getLocalHost.getHostAddress
 
 	lazy val basicSettings = Seq(
-		// organization 				:= "com.bottlerocketapps",
-		// description 				:= "Web service component for the AWE mobile app",
-		//startYear 					:= Some(2014),
-		// licenses 					:= Seq("Apache 2" -> new URL("http://www.apache.org/licenses/LICENSE-2.0.txt")),
 		scalaVersion 				:= "2.11.1",
-		//parallelExecution in Test 	:= false,
-		//fork in Test                := true,
 		resolvers ++= Dependencies.resolutionRepos,
 		scalacOptions				:= Seq(
 										"-feature", 
@@ -30,23 +24,7 @@ import Dependencies._
 										"-encoding", "UTF8", 
 										"-unchecked"),
 		assembleArtifact in packageScala := false,
-		testOptions in Test         += Tests.Argument("-oDF"),
-		// javaOptions in Test         := Seq("-DmyIp="+myHost, "-XX:MaxPermSize=256M"),
-		// jvmOptions in MultiJvm      := Seq("-DmyIp="+myHost, "-XX:MaxPermSize=256M"),
-		// libraryDependencies         ++= Seq(multijvm),
-		// executeTests in Test        <<= (executeTests in Test, executeTests in MultiJvm) map {
-		// 	case (testResults, multiNodeResults) =>
-		// 		val overall =
-		// 			if( testResults.overall.id< multiNodeResults.overall.id )
-		// 				multiNodeResults.overall
-		// 			else
-		// 				testResults.overall
-		// 		Tests.Output(overall,
-		// 				testResults.events ++ multiNodeResults.events,
-		// 				testResults.summaries ++ multiNodeResults.summaries)
-		// },
-
-		version                     := "0.1.0"
+		testOptions in Test         += Tests.Argument("-oDF")
 
 		// PUBLISH
 		// pomIncludeRepository 		:= { _ => true },
@@ -111,25 +89,31 @@ import Dependencies._
 		)
 	)
 
-	// lazy val ecos = Project(
-	// 	"ecos", 
-	// 	file("ecos"),
-	// 	settings = basicSettings ++ (libraryDependencies ++=
-	// 		xcompile(akka_actor, spray_routing, spray_can) ++
-	// 		test(scalatest)
-	// 	)
-	// ).dependsOn( core )
-
 	lazy val roots = Project(
 		"roots", 
 		file("roots"),
 		settings = basicSettings ++ buildSettings ++ multiJvmSettings 
-			++ Seq( jvmOptions in MultiJvm += "-DmyIp="+myHost)
+			++ Seq( 
+				jvmOptions in MultiJvm += "-DmyIp="+myHost,
+				version                := "0.1.0"
+				)
 			++ (libraryDependencies ++=
-			xcompile(akka_actor, spray_routing, spray_can, akka_cluster) ++
-			test(scalatest, spray_client, multijvm, akka_cluster, akka_slf4j, slf4j_simple)
-		),
+				xcompile(scalautils, akka_actor, spray_routing, spray_can, akka_cluster) ++
+				test(scalatest, spray_client, multijvm, akka_cluster, akka_slf4j, slf4j_simple)
+			),
 		configurations = Configurations.default :+ MultiJvm
 	).dependsOn( core )
 
+	lazy val ecos = Project(
+		"ecos", 
+		file("ecos"),
+		settings = basicSettings 
+			++ Seq(
+				version                := "0.2.0"
+				)
+			++ (libraryDependencies ++=
+				xcompile(akka_actor, spray_routing, spray_can) ++
+				test(scalatest)
+			)
+	).dependsOn( core, roots )
 }

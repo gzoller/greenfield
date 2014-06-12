@@ -29,6 +29,7 @@ object Dependencies {
 	val spray_client	= "io.spray"				%% "spray-client"		% SPRAY_VER
 	val spray_routing	= "io.spray"				%% "spray-routing"		% SPRAY_VER
 	val spray_caching	= "io.spray"				%% "spray-caching"		% SPRAY_VER
+	val scalautils      = "org.scalautils" 			%% "scalautils"			% "2.1.7"
 
 	// val commons_codec	= "commons-codec"			% "commons-codec"       % "1.8"
 	// val commons_lang	= "commons-lang"			% "commons-lang"        % "2.6"

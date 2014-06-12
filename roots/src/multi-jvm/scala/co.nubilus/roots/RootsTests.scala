@@ -30,9 +30,9 @@ class RootsMultiJvmTests1 extends FunSpec with BeforeAndAfterAll {
 
 	describe("===============\n| Roots Tests |\n===============") {
 		it("Environment starts up and responds to ping") {
-			val resp = selection ? "ping"
+			val resp = selection ? "yin"
 			val reply = Await.result(resp, 15.seconds)
-			reply should be("pong")
+			reply should be("yang")
 		}
 	}
 }
