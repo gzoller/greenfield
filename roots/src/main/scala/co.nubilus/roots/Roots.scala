@@ -3,17 +3,19 @@ package roots
 
 import core._
 import com.typesafe.config.{Config, ConfigFactory}
-import akka.actor.{Actor, ActorSystem, Props}
+import akka.actor._
 
 trait Roots {
-	val version                = Version("roots:roots",BuildInfo.version)
-	val actor : Props          = Props(new RootsActor(this))
-	lazy val (system, ecosRef) = digestConfig(actor)
+	val version        = Version("roots:roots",BuildInfo.version)
+	val actor : Props  = Props(new RootsActor(this))
+	lazy val system    = digestConfig(actor)
 
 	protected final val pod = new SetOnce[Pod]
 	def podVersion = Version(pod.name,pod.version)
 
-	private[roots] var health:HealthStatus.Value = HealthStatus.OK
+	private[roots] var health  : HealthStatus.Value     = HealthStatus.OK
+	private[roots] var ecosUri : Option[String]         = None
+	private[roots] var ecosRef : Option[ActorSelection] = None
 
 	// All done for now... we just wait for Ecos to notify us with instructions to load a Pod.
 	// Meanwhile we can answer all events.
@@ -22,8 +24,7 @@ trait Roots {
 		val cfg      = ConfigFactory.load
 		val system   = ActorSystem( cfg.getString("cluster-name"), cfg )
 		system.actorOf( a, "roots" )
-		val ref      = system.actorSelection( cfg.getString("ecos-uri" ) )
-		(system, ref)
+		system
 	}
 
 	def setPod( p:Pod, lvs:List[Leaf] ) : Boolean = 

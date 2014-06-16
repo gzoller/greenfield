@@ -112,7 +112,7 @@ import Dependencies._
 				)
 			++ (libraryDependencies ++=
 				xcompile(akka_actor, spray_routing, spray_can) ++
-				test(scalatest, multijvm, akka_slf4j, slf4j_simple)
+				test(scalatest, multijvm, akka_cluster, akka_slf4j, slf4j_simple)
 			),
 		configurations = Configurations.default :+ MultiJvm
 	).dependsOn( core, roots )

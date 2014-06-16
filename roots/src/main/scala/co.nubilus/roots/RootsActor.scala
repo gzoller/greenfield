@@ -12,6 +12,7 @@ import scala.collection.JavaConversions._
 // Messages
 case class ErrorMsg( msg:String, host:String = Util.myHost )
 case class PodMsg( version:Version, cfg:String )
+case class EcosMsg( ecosInstances:Set[String] )
 
 /*
 	Pod config fields:
@@ -24,8 +25,19 @@ case class PodMsg( version:Version, cfg:String )
 class RootsActor( roots:Roots ) extends Actor {
 
 	def receive = {
-		case "ping"    => sender ! "pong"
-		case pm:PodMsg => loadPod( pm )
+		case "ping"     => sender ! "pong"
+		case em:EcosMsg => 
+			if( roots.ecosUri.isEmpty || !em.ecosInstances.contains(roots.ecosUri.get) ) {
+				if( em.ecosInstances.size == 0 ) {
+					roots.ecosUri = None
+					roots.ecosRef = None
+				} else {
+					roots.ecosUri = Some(scala.util.Random.shuffle( em.ecosInstances ).head)
+					roots.ecosRef = Some(roots.system.actorSelection( roots.ecosUri.get ))
+				}
+				println("Ecos discovered: "+roots.ecosUri)
+			}
+		case pm:PodMsg  => loadPod( pm )
 	}
 
 	def loadPod( pm : PodMsg ) = {
