@@ -4,7 +4,7 @@ package roots
 import core._
 import spray.routing._
 import Directives._
-import akka.actor.ActorSystem
+import akka.actor.{Props, ActorSystem}
 import com.typesafe.config.{Config, ConfigFactory}
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -14,10 +14,10 @@ trait Pod extends Lifecycle with HealthMonitor with Stats with Versions with Sim
 	val name    : String
 	val version : String
 
-	protected      final val roots   = new SetOnce[Roots]
-	private        final val leaves  = new SetOnce[List[Leaf]]
-	private[roots] final val started = new SetOnce[Boolean]
-	protected      final val system  = new SetOnce[ActorSystem]
+	protected      final val roots    = new SetOnce[Roots]
+	private        final val leaves   = new SetOnce[List[Leaf]]
+	private[roots] final val started  = new SetOnce[Boolean]
+	protected      final val system   = new SetOnce[ActorSystem]
 
 	private[roots] def init( r:Roots, lvs:List[Leaf] ) {
 		// Credentials for set-once values
@@ -28,20 +28,27 @@ trait Pod extends Lifecycle with HealthMonitor with Stats with Versions with Sim
 		preStartup( r )
 	}
 
+	// Implementing classes can override this if they want a real PodActor here.
+	protected def createPodActor(actorName:String) = system.actorOf( Props(new DefaultPodActor(this)), actorName )
+
 	private[roots] def start( config:Config ) = {
 
 		// Start an ActorSystem if needed.  Don't use roots' ActorSystem!  That's only for low-level communication.
 		implicit val systemCred = system.allowAssignment 
 		system := ActorSystem( config.getString("cluster-name"), config )
 
-		// Start Spray HTTP endpoint service
+		// Start Spray HTTP endpoint service (if any leaves defined)
 		implicit val sys:ActorSystem = system
-		Await.result( 
-			startServer( 
-				interface = Util.myHost, 
-				port = config.getInt("http-port"), 
-				serviceActorName="pod" )( leaves.map(_.route).reduceLeft(_ ~ _) ), 
-			Duration.Inf)
+		if( leaves.size > 0 )
+			Await.result( 
+				startServer( 
+					interface = Util.myHost, 
+					port = config.getInt("http-port"), 
+					serviceActorName="pod" )( leaves.map(_.route).reduceLeft(_ ~ _) ), 
+				Duration.Inf)
+
+		// Start Pod's Actor (Default one at least)
+		createPodActor( config.getString("pod-actor-name") )
 
 		postStartup( roots )
 	}

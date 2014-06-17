@@ -17,7 +17,7 @@ import scala.language.postfixOps
 import scala.util.control.Breaks._
 import org.scalautils.TimesOnInt._
 
-class RootsMultiJvmTests1 extends FunSpec with BeforeAndAfterAll {
+class RootsMultiJvmTests1 extends FunSpec with BeforeAndAfterAll with GivenWhenThen {
 
 	var t : Roots           = null
 	val host                = core.Util.myHost
@@ -30,8 +30,12 @@ class RootsMultiJvmTests1 extends FunSpec with BeforeAndAfterAll {
 	// Http server for things like jar service
 	val http = new HttpServer(system) //.init()
 
+	// Build a jar file for test Pod
+	"jar cf ecos/src/test/resources/pod1.jar ecos/target/scala-2.11/multi-jvm-classes/co/nubilus/ecos/MyPod.class" !
+
 	private def sel(port:Int)      = system.actorSelection(s"""akka.tcp://test@$host:$port/user/test""")
 	private def selRoots(port:Int) = system.actorSelection(s"""akka.tcp://rootsCluster@$host:$port/user/roots""")
+	private def selPod(port:Int)   = system.actorSelection(s"""akka.tcp://podNest@$host:$port/user/pod""")
 
 	override def beforeAll() {
 		// t = TestRootsPod1()
@@ -68,44 +72,28 @@ class RootsMultiJvmTests1 extends FunSpec with BeforeAndAfterAll {
 		}
 		*/
 		it("Starts a Roots node and tells it to load a Pod.  Can ping the Pod") {
+			Given("A roots server is started")
 			sel(9001) ! RootsStartMsg(9010, true)
 			Thread.sleep(delay)
 			val reply = Await.result( selRoots(9010) ? VerMsg(), 5.seconds )
 			reply should equal( List(Version("roots:roots","0.1.0"), Version("none","none")) )
-			// Build a jar file for test Pod
-			"jar cf ecos/src/test/resources/pod1.jar ecos/target/scala-2.11/multi-jvm-classes/co/nubilus/ecos/MyPod.class" !
-			val cfg = s"""
-				cluster-name = "podNest"
-				http-port = 9030
-				jar-files = ["http://localhost:9090/repo/pod1.jar"]
-				pod-class = "co.nubilus.ecos.MyPod"
-				leaf-classes = []
-				akka {
-					log-dead-letters-during-shutdown = off
-					loglevel = "ERROR"
-					stdout-loglevel = "ERROR"
-					loggers = ["akka.event.slf4j.Slf4jLogger"]
-					actor {
-						provider = "akka.cluster.ClusterActorRefProvider"
-					}
-					remote {
-						log-remote-lifecycle-events = off
-						enabled-transports = ["akka.remote.netty.tcp"]
-						netty.tcp {	
-							port = 9040
-						}
-					}
-					cluster {
-						seed-nodes = [ "akka.tcp://podNest@$host:9040" ]
-						auto-down = on
-						log-info = off
-					}
-				}
-			"""
+
+			When("A PodMsg is stent to it to load a test Pod")
+			val cfg = scala.io.Source.fromFile("ecos/src/test/resources/unit_cfg1.conf","utf-8").mkString.replaceAllLiterally("$host",host)
 			selRoots(9010) ! PodMsg( Version("MyPod","1"), cfg )
 			Thread.sleep(delay)
+
+			Then("Confirm it loaded successfully by looking at the version")
 			val reply2 = Await.result( selRoots(9010) ? VerMsg(), 5.seconds )
-			println(reply2)
+			reply2 should equal( List(Version("roots:roots","0.1.0"), Version("MyPod","1")) )
+
+			And("Test the Pod's ping message")
+			val reply3 = Await.result( selPod(9040) ? "ping", 5.seconds )
+			reply3 should be("pong (default) Pod [roots:roots/0.1.0, pod:MyPod/1]")
+
+			And("Tear down the Roots instance to clean up")
+			sel(9001) ! RootsStopMsg()
+			Thread.sleep(delay)
 		}
 		it("Successfully discovers new pod node") {
 			(pending)

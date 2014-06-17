@@ -53,9 +53,9 @@ class RootsActor( roots:Roots ) extends Actor {
 
 		def loadClasses( ucl:URLClassLoader, config:Config ) : (Pod, List[Leaf]) Or (Option[HealthStatus.Value],ErrorMsg) = 
 			Try {
-				val p = Util.loadClass[Pod]( config.getString("pod-class"), ucl )
+				val p   = Util.loadClass[Pod]( config.getString("pod-class"), ucl )
 				val lvs = config.getStringList("leaf-classes").map( lc => Util.loadClass[Leaf]( lc, ucl )).toList
-				Good((p,lvs))
+				Good( (p,lvs) )
 			}.toOption
 				.getOrElse( Bad((Some(HealthStatus.CANCER), ErrorMsg("Could not marshal Pod or Leaf classes for Pod "+pm.version)) ))
 
@@ -71,6 +71,7 @@ class RootsActor( roots:Roots ) extends Actor {
 		} yield done) match {
 			case Bad((health, errmsg)) =>
 				health.map( h => roots.health = h )
+				println("ERR: "+errmsg)
 				sender ! errmsg
 			case _ => // do nothing...worked
 		}
