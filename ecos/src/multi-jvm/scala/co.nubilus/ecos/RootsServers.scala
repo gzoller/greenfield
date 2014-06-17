@@ -14,11 +14,12 @@ case class PodServer( p:Int, r:String ) extends TestServerWorker {
 	// the actor starts up.
 	val s = system 
 }
-// case class EcosServer( p:Int, r:String ) extends TestServerWorker { 
-// 	val port = p
-// 	val role = r
-// 	override val actor : Props = Props(new EcosTestActor(null,this))
-// }
+case class EcosServer( p:Int, r:String ) extends TestServerWorker { 
+	val port = p
+	val role = r
+	// override val actor : Props = Props(new EcosTestActor(null,this))
+	val s = system 
+}
 
 trait TestServerWorker extends Roots {
 	val port : Int

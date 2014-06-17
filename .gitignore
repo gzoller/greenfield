@@ -14,6 +14,7 @@ wip/
 tags
 .ensime
 *.iml
+*.jar
 *.log
 .dbshell
 *.tok

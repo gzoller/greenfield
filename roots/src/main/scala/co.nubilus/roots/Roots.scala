@@ -11,7 +11,11 @@ trait Roots {
 	lazy val system    = digestConfig(actor)
 
 	protected final val pod = new SetOnce[Pod]
-	def podVersion = Version(pod.name,pod.version)
+	def podVersion = 
+		if( pod.isSet )
+			Version(pod.name,pod.version)
+		else
+			Version("none","none")
 
 	private[roots] var health  : HealthStatus.Value     = HealthStatus.OK
 	private[roots] var ecosUri : Option[String]         = None

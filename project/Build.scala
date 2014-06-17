@@ -24,7 +24,8 @@ import Dependencies._
 										"-encoding", "UTF8", 
 										"-unchecked"),
 		assembleArtifact in packageScala := false,
-		testOptions in Test         += Tests.Argument("-oDF")
+		testOptions in Test 		+= Tests.Argument("-oDF"),
+		version 					:= "0.1.0"
 
 		// PUBLISH
 		// pomIncludeRepository 		:= { _ => true },
@@ -84,7 +85,7 @@ import Dependencies._
 		"core", 
 		file("core"),
 		settings = basicSettings ++ (libraryDependencies ++=
-			// xcompile(akka_actor, spray_routing, spray_can) ++
+			xcompile(akka_actor, spray_routing, spray_can, spray_client) ++
 			test(scalatest)
 		)
 	)
@@ -93,9 +94,6 @@ import Dependencies._
 		"roots", 
 		file("roots"),
 		settings = basicSettings ++ buildSettings 
-			++ Seq( 
-				version                := "0.1.0"
-				)
 			++ (libraryDependencies ++=
 				xcompile(scalautils, akka_actor, spray_routing, spray_can, akka_cluster) ++
 				test(scalatest, spray_client, akka_cluster, akka_slf4j, slf4j_simple)
@@ -107,8 +105,7 @@ import Dependencies._
 		file("ecos"),
 		settings = basicSettings ++ buildSettings ++ multiJvmSettings  
 			++ Seq(
-				jvmOptions in MultiJvm += "-DmyIp="+myHost,
-				version                := "0.2.0"
+				jvmOptions in MultiJvm += "-DmyIp="+myHost
 				)
 			++ (libraryDependencies ++=
 				xcompile(akka_actor, spray_routing, spray_can) ++

@@ -13,6 +13,7 @@ import scala.collection.JavaConversions._
 case class ErrorMsg( msg:String, host:String = Util.myHost )
 case class PodMsg( version:Version, cfg:String )
 case class EcosMsg( ecosInstances:Set[String] )
+case class VerMsg()
 
 /*
 	Pod config fields:
@@ -26,6 +27,7 @@ class RootsActor( roots:Roots ) extends Actor {
 
 	def receive = {
 		case "ping"     => sender ! "pong"
+		case vm:VerMsg  => sender ! List(roots.version, roots.podVersion)
 		case em:EcosMsg => 
 			if( roots.ecosUri.isEmpty || !em.ecosInstances.contains(roots.ecosUri.get) ) {
 				if( em.ecosInstances.size == 0 ) {
