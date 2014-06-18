@@ -17,9 +17,8 @@ trait Roots {
 		else
 			Version("none","none")
 
-	private[roots] var health  : HealthStatus.Value     = HealthStatus.OK
-	private[roots] var ecosUri : Option[String]         = None
-	private[roots] var ecosRef : Option[ActorSelection] = None
+	private[roots] var health   : HealthStatus.Value     = HealthStatus.OK
+	private[roots] var ecosUris : List[String]           = List.empty[String]
 
 	// All done for now... we just wait for Ecos to notify us with instructions to load a Pod.
 	// Meanwhile we can answer all events.

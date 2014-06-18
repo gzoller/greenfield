@@ -42,7 +42,7 @@ class EcosRootsActor( ecos:EcosPod, r:Roots ) extends RootsActor(r) {
 		// Event sent when a new cluster member comes up. Register the new cluster member if it is the parent node
 //akka.tcp://rootsCluster@10.23.1.188:9001
 		case MemberUp(member) => 
-println("Member Up: "+member.address+"  Roles: "+member.roles)
+// println("Member Up: "+member.address+"  Roles: "+member.roles)
 			if( member.roles.contains("ecos") ) {
 				ecosNodes += fullAddr(member.address)
 				sayToPods( EcosMsg( ecosNodes ) ) // Now tell all the pods about the new ecos

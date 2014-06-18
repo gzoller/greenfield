@@ -29,16 +29,8 @@ class RootsActor( roots:Roots ) extends Actor {
 		case "ping"     => sender ! "pong"
 		case vm:VerMsg  => sender ! List(roots.version, roots.podVersion)
 		case em:EcosMsg => 
-			if( roots.ecosUri.isEmpty || !em.ecosInstances.contains(roots.ecosUri.get) ) {
-				if( em.ecosInstances.size == 0 ) {
-					roots.ecosUri = None
-					roots.ecosRef = None
-				} else {
-					roots.ecosUri = Some(scala.util.Random.shuffle( em.ecosInstances ).head)
-					roots.ecosRef = Some(roots.system.actorSelection( roots.ecosUri.get ))
-				}
-				println("Ecos discovered: "+roots.ecosUri)
-			}
+			roots.ecosUris = scala.util.Random.shuffle( em.ecosInstances.toList )
+			println("Ecos discovered: "+roots.ecosUris)
 		case pm:PodMsg  => loadPod( pm )
 	}
 

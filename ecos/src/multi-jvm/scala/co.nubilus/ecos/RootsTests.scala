@@ -14,8 +14,9 @@ import akka.util.Timeout
 import scala.util.Try
 import sys.process._
 import scala.language.postfixOps
-import scala.util.control.Breaks._
-import org.scalautils.TimesOnInt._
+import scala.collection.immutable.TreeSet
+// import scala.util.control.Breaks._
+// import org.scalautils.TimesOnInt._
 
 class RootsMultiJvmTests1 extends FunSpec with BeforeAndAfterAll with GivenWhenThen {
 
@@ -47,6 +48,7 @@ class RootsMultiJvmTests1 extends FunSpec with BeforeAndAfterAll with GivenWhenT
 	override def afterAll() = {
 		(9001 to 9004).toStream.foreach( port => sel(port) ! TestServerStopMsg() )
 		Thread.sleep(2000)
+		system.shutdown
 	}
 
 	describe("===============\n| Roots Tests |\n===============") {
@@ -56,35 +58,34 @@ class RootsMultiJvmTests1 extends FunSpec with BeforeAndAfterAll with GivenWhenT
 			reply should be("pong test")
 		}
 		it("Starts, tests, and stops a Roots node a couple of times") {
-			sel(9001) ! RootsStartMsg(9010, true)
+			sel(9001) ! RootsStartMsg(9011, true)
 			Thread.sleep(delay)
-			val reply = Await.result( selRoots(9010) ? "ping", 5.seconds )
+			val reply = Await.result( selRoots(9011) ? "ping", 5.seconds )
 			reply should be("pong")
 			sel(9001) ! RootsStopMsg()
 			Thread.sleep(delay)
-			Try( Await.result( selRoots(9010) ? "ping", 5.seconds ) ).isSuccess should be( false )
-			sel(9001) ! RootsStartMsg(9010, true)
+			Try( Await.result( selRoots(9011) ? "ping", 5.seconds ) ).isSuccess should be( false )
+			sel(9001) ! RootsStartMsg(9011, true)
 			Thread.sleep(delay)
-			val reply2 = Await.result( selRoots(9010) ? "ping", 5.seconds )
+			val reply2 = Await.result( selRoots(9011) ? "ping", 5.seconds )
 			reply2 should be("pong")
 			sel(9001) ! RootsStopMsg()
 			Thread.sleep(delay)
 		}
-		*/
 		it("Starts a Roots node and tells it to load a Pod.  Can ping the Pod") {
 			Given("A roots server is started")
-			sel(9001) ! RootsStartMsg(9010, true)
+			sel(9001) ! RootsStartMsg(9011, true)
 			Thread.sleep(delay)
-			val reply = Await.result( selRoots(9010) ? VerMsg(), 5.seconds )
+			val reply = Await.result( selRoots(9011) ? VerMsg(), 5.seconds )
 			reply should equal( List(Version("roots:roots","0.1.0"), Version("none","none")) )
 
 			When("A PodMsg is stent to it to load a test Pod")
 			val cfg = scala.io.Source.fromFile("ecos/src/test/resources/unit_cfg1.conf","utf-8").mkString.replaceAllLiterally("$host",host)
-			selRoots(9010) ! PodMsg( Version("MyPod","1"), cfg )
+			selRoots(9011) ! PodMsg( Version("MyPod","1"), cfg )
 			Thread.sleep(delay)
 
 			Then("Confirm it loaded successfully by looking at the version")
-			val reply2 = Await.result( selRoots(9010) ? VerMsg(), 5.seconds )
+			val reply2 = Await.result( selRoots(9011) ? VerMsg(), 5.seconds )
 			reply2 should equal( List(Version("roots:roots","0.1.0"), Version("MyPod","1")) )
 
 			And("Test the Pod's ping message")
@@ -95,8 +96,29 @@ class RootsMultiJvmTests1 extends FunSpec with BeforeAndAfterAll with GivenWhenT
 			sel(9001) ! RootsStopMsg()
 			Thread.sleep(delay)
 		}
-		it("Successfully discovers new pod node") {
-			(pending)
+		*/
+		it("Successfully discovers new Roots node") {
+			Given("Start an Ecos node")
+			sel(9001) ! RootsStartMsg(9011, false) // run an ecos server
+			Thread.sleep(delay)
+
+			When("A Roots node is started")
+			sel(9002) ! RootsStartMsg(9012, true)
+			Thread.sleep(delay)
+
+			Then("Ecos node should recognize it")
+			val reply = Await.result( selRoots(9011) ? WhoDoYouKnow(), 5.seconds )
+			reply should equal( Friends(TreeSet(s"akka.tcp://rootsCluster@$host:9011/user/roots"),TreeSet(s"akka.tcp://rootsCluster@$host:9012/user/roots")) )
+
+			And("Roots node should receive an EcosMsg and register Ecos node")
+			val reply2 = Await.result( selRoots(9012) ? WhoDoYouKnow(), 5.seconds )
+			reply2 should equal( Friends(TreeSet(s"akka.tcp://rootsCluster@$host:9011/user/roots"),Set[String]()) )
+
+			And("Tear down test nodes to clean up")
+			sel(9001) ! RootsStopMsg()
+			Thread.sleep(delay)
+			sel(9002) ! RootsStopMsg()
+			Thread.sleep(delay)
 			/*
 			Need to fire this up in yet another jvm!
 			val t2 = TestRootsPod()

@@ -14,8 +14,8 @@ class EcosTestActor( ecos:EcosPod, roots:Roots ) extends EcosRootsActor(ecos, ro
 	def rec2 : Actor.Receive = {
 		case "yin"          => sender ! "yang" 
 		case w:WhoDoYouKnow => sender ! Friends( ecosNodes, podNodes )
-		case "stop"         => roots.system.shutdown
-		case x => println("Other: "+x)
+		// case "stop"         => roots.system.shutdown
+		// case x => println("Other: "+x)
 	}
 
 	override def receive = super.receive orElse rec2

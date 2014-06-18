@@ -9,15 +9,18 @@ case class PodServer( p:Int, r:String ) extends TestServerWorker {
 	val port = p; 
 	val role = r; 
 
+	override val actor : Props = Props(new RootsTestActor(this))
+
 	// system has been defined as lazy in Roots to allow subclasses to define key vals and
 	// possibly override digestConfig.  Now we must force resolution of the lazy system so that
 	// the actor starts up.
 	val s = system 
 }
+
 case class EcosServer( p:Int, r:String ) extends TestServerWorker { 
 	val port = p
 	val role = r
-	// override val actor : Props = Props(new EcosTestActor(null,this))
+	override val actor : Props = Props(new EcosTestActor(null,this))
 	val s = system 
 }
 
@@ -61,9 +64,10 @@ class TestServerActor( ts:TestServer ) extends Actor {
 			ts.system.shutdown
 
 		case rsm:RootsStartMsg =>
-			if( rsm.isPod ) {
+			if( rsm.isPod )
 				ts.roots = PodServer(rsm.port, "pod")
-			}
+			else
+				ts.roots = EcosServer(rsm.port, "ecos")
 
 		case rstp:RootsStopMsg => ts.roots.system.shutdown
 
