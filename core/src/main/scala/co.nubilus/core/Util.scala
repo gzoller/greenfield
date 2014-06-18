@@ -29,6 +29,9 @@ object Util {
 		}.toOption
 	}
 
+	// Replace multiple tokens in a given string at once
+	def multiReplace( s:String, m:Map[String,String] ) = m.foldLeft(s)( (t,g) => t.replaceAllLiterally(g._1,g._2) )
+
 	def loadClass[T]( className:String, cl:ClassLoader ) = Class.forName( className, true, cl ).newInstance().asInstanceOf[T]
 
 	def httpGet( uri:String )(implicit s:ActorSystem, timeout:Timeout = 30 seconds) = {

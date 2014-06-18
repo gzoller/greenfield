@@ -31,6 +31,7 @@ class RootsActor( roots:Roots ) extends Actor {
 		case em:EcosMsg => 
 			roots.ecosUris = scala.util.Random.shuffle( em.ecosInstances.toList )
 			println("Ecos discovered: "+roots.ecosUris)
+			println("Sender: "+sender.path.address)
 		case pm:PodMsg  => loadPod( pm )
 	}
 

@@ -15,6 +15,7 @@ case class PodServer( p:Int, r:String ) extends TestServerWorker {
 	// possibly override digestConfig.  Now we must force resolution of the lazy system so that
 	// the actor starts up.
 	val s = system 
+	Thread.sleep(1000)
 }
 
 case class EcosServer( p:Int, r:String ) extends TestServerWorker { 
@@ -22,6 +23,7 @@ case class EcosServer( p:Int, r:String ) extends TestServerWorker {
 	val role = r
 	override val actor : Props = Props(new EcosTestActor(null,this))
 	val s = system 
+	Thread.sleep(1000)
 }
 
 trait TestServerWorker extends Roots {
@@ -29,8 +31,11 @@ trait TestServerWorker extends Roots {
 	val role : String
 
 	override def digestConfig(a:Props) = {
-		val cfg      = ConfigFactory.parseString("akka.remote.netty.tcp.port = "+port+",akka.cluster.roles=["+role+"]").withFallback(ConfigFactory.load("worker.conf"))
-		val system   = ActorSystem( "rootsCluster", cfg )
+		val cfg = ConfigFactory.parseString(s"""
+			akka.remote.netty.tcp.port = $port
+			akka.cluster.roles =[ $role ]
+			""").withFallback(ConfigFactory.load("worker.conf"))
+		val system = ActorSystem( "rootsCluster", cfg )
 		system.actorOf( a, "roots" )
 		system
 	}
@@ -63,13 +68,15 @@ class TestServerActor( ts:TestServer ) extends Actor {
 			println("Stopping "+ts.port)
 			ts.system.shutdown
 
-		case rsm:RootsStartMsg =>
+		case rsm:RootsStartMsg      =>
 			if( rsm.isPod )
 				ts.roots = PodServer(rsm.port, "pod")
 			else
 				ts.roots = EcosServer(rsm.port, "ecos")
 
-		case rstp:RootsStopMsg => ts.roots.system.shutdown
+		case rstp:RootsStopMsg      => 
+			println("Stop Roots on "+ts.port)
+			ts.roots.system.shutdown
 
 		case other => println("Other: "+other)
 	}

@@ -15,8 +15,15 @@ import scala.util.Try
 import sys.process._
 import scala.language.postfixOps
 import scala.collection.immutable.TreeSet
-// import scala.util.control.Breaks._
-// import org.scalautils.TimesOnInt._
+
+//  Ports/Layers
+//
+//  Pod/Ecos     		9021/9031	9022/9032	9023/9033	9024/9034   (akka/http)
+//  Roots 		 		9011		9012		9013		9014
+//  test (base)	9000	9001		9002		9003		9004
+//
+//  HTTP server			9090
+
 
 class RootsMultiJvmTests1 extends FunSpec with BeforeAndAfterAll with GivenWhenThen {
 
@@ -26,10 +33,10 @@ class RootsMultiJvmTests1 extends FunSpec with BeforeAndAfterAll with GivenWhenT
 	val cfg                 = ConfigFactory.parseString("akka.remote.netty.tcp.port = 9000").withFallback(ConfigFactory.load("testServer.conf"))
 	implicit val system     = ActorSystem( "test", cfg )
 
-	val delay               = 750
+	val delay               = 2700
 
 	// Http server for things like jar service
-	val http = new HttpServer(system) //.init()
+	val http = new HttpServer(system) 
 
 	// Build a jar file for test Pod
 	"jar cf ecos/src/test/resources/pod1.jar ecos/target/scala-2.11/multi-jvm-classes/co/nubilus/ecos/MyPod.class" !
@@ -49,6 +56,7 @@ class RootsMultiJvmTests1 extends FunSpec with BeforeAndAfterAll with GivenWhenT
 		(9001 to 9004).toStream.foreach( port => sel(port) ! TestServerStopMsg() )
 		Thread.sleep(2000)
 		system.shutdown
+		system.awaitTermination
 	}
 
 	describe("===============\n| Roots Tests |\n===============") {
@@ -80,7 +88,9 @@ class RootsMultiJvmTests1 extends FunSpec with BeforeAndAfterAll with GivenWhenT
 			reply should equal( List(Version("roots:roots","0.1.0"), Version("none","none")) )
 
 			When("A PodMsg is stent to it to load a test Pod")
-			val cfg = scala.io.Source.fromFile("ecos/src/test/resources/unit_cfg1.conf","utf-8").mkString.replaceAllLiterally("$host",host)
+			val params = Map("$akkaPort"->"9021","$seedPort"->"9021","$httpPort"->"9031","$host"->host)
+			val cfg = Util.multiReplace( scala.io.Source.fromFile("ecos/src/test/resources/unit_cfg1.conf","utf-8").mkString, params)
+//			val cfg = scala.io.Source.fromFile("ecos/src/test/resources/unit_cfg1.conf","utf-8").mkString.replaceAllLiterally("$host",host)
 			selRoots(9011) ! PodMsg( Version("MyPod","1"), cfg )
 			Thread.sleep(delay)
 
@@ -89,7 +99,7 @@ class RootsMultiJvmTests1 extends FunSpec with BeforeAndAfterAll with GivenWhenT
 			reply2 should equal( List(Version("roots:roots","0.1.0"), Version("MyPod","1")) )
 
 			And("Test the Pod's ping message")
-			val reply3 = Await.result( selPod(9040) ? "ping", 5.seconds )
+			val reply3 = Await.result( selPod(9021) ? "ping", 5.seconds )
 			reply3 should be("pong (default) Pod [roots:roots/0.1.0, pod:MyPod/1]")
 
 			And("Tear down the Roots instance to clean up")
@@ -100,6 +110,8 @@ class RootsMultiJvmTests1 extends FunSpec with BeforeAndAfterAll with GivenWhenT
 		it("Successfully discovers new Roots node") {
 			Given("Start an Ecos node")
 			sel(9001) ! RootsStartMsg(9011, false) // run an ecos server
+			sel(9003) ! RootsStartMsg(9013, false) // run an ecos server
+			sel(9004) ! RootsStartMsg(9014, false) // run an ecos server
 			Thread.sleep(delay)
 
 			When("A Roots node is started")
@@ -114,39 +126,59 @@ class RootsMultiJvmTests1 extends FunSpec with BeforeAndAfterAll with GivenWhenT
 			val reply2 = Await.result( selRoots(9012) ? WhoDoYouKnow(), 5.seconds )
 			reply2 should equal( Friends(TreeSet(s"akka.tcp://rootsCluster@$host:9011/user/roots"),Set[String]()) )
 
-			And("Tear down test nodes to clean up")
-			sel(9001) ! RootsStopMsg()
-			Thread.sleep(delay)
-			sel(9002) ! RootsStopMsg()
-			Thread.sleep(delay)
-			/*
-			Need to fire this up in yet another jvm!
-			val t2 = TestRootsPod()
-			// Figure out how to know if:
-			// 1) Ecos registered new pod coming up
-			// 2) new pod received a EcosMsg from Ecos
-			breakable {
-				10 times {
-					val resp = selection ? WhoDoYouKnow()
-					val reply = Await.result(resp, 15.seconds)
-					val friends = reply.asInstanceOf[Friends]
-					println(friends)
-					if( friends.pods.size == 2 && friends.pods.contains(s"""akka.tcp://rootsCluster@$host:9003/user/roots""") ) break
-					Thread.sleep(500)
-				}
-				fail("Didn't see new pod registered in ecos.")
-			}
-			*/
+			// Leave these nodes up for next tests!
 		}
+		/*
 		it("Successfully discovers new ecos node") {
-			(pending)
+			Given("Start annother Ecos node (in addition to one from last test)")
+			sel(9003) ! RootsStartMsg(9013, false) // run an ecos server
+			Thread.sleep(delay)
+
+			Then("Existing Roots node should be notified")
+			val reply = Await.result( selRoots(9012) ? WhoDoYouKnow(), 5.seconds )
+			reply should equal( Friends(TreeSet(s"akka.tcp://rootsCluster@$host:9011/user/roots",s"akka.tcp://rootsCluster@$host:9013/user/roots"),Set[String]()) )
+
+			And("New Ecos node should know about everybody")
+			val reply1 = Await.result( selRoots(9013) ? WhoDoYouKnow(), 5.seconds )
+			reply1 should equal( Friends(TreeSet(s"akka.tcp://rootsCluster@$host:9011/user/roots",s"akka.tcp://rootsCluster@$host:9013/user/roots"),TreeSet(s"akka.tcp://rootsCluster@$host:9012/user/roots")) )
+
+			And("So should the original Ecos node")
+			val reply2 = Await.result( selRoots(9011) ? WhoDoYouKnow(), 5.seconds )
+			reply2 should equal( Friends(TreeSet(s"akka.tcp://rootsCluster@$host:9011/user/roots",s"akka.tcp://rootsCluster@$host:9013/user/roots"),TreeSet(s"akka.tcp://rootsCluster@$host:9012/user/roots")) )
+
+			// Leave these nodes up for next tests!
 		}
 		it("Successfully removes ecos node") {
-			(pending)
+			Given("An Ecos node is stopped")
+			sel(9003) ! RootsStopMsg()
+			Thread.sleep(delay)
+
+			Then("Existing Roots node should be updated (only have one remaining Ecos node known to it)")
+			val reply = Await.result( selRoots(9012) ? WhoDoYouKnow(), 5.seconds )
+			reply should equal( Friends(TreeSet(s"akka.tcp://rootsCluster@$host:9011/user/roots"),Set[String]()) )
+
+			And("Remaining Ecos node should likewise be aware of the removal of an Ecos node")
+			val reply2 = Await.result( selRoots(9011) ? WhoDoYouKnow(), 5.seconds )
+			reply2 should equal( Friends(TreeSet(s"akka.tcp://rootsCluster@$host:9011/user/roots"),TreeSet(s"akka.tcp://rootsCluster@$host:9012/user/roots")) )
+
+			// Leave these nodes up for next tests!
 		}
+		*/
+		/*
 		it("Successfully removes pod node") {
-			(pending)
+			Given("A Pod node is stopped")
+			sel(9002) ! RootsStopMsg()
+			Thread.sleep(delay)
+
+			Then("Remaining Ecos node should be aware of the removal of an Pod node")
+			val reply2 = Await.result( selRoots(9013) ? WhoDoYouKnow(), 5.seconds )
+			reply2 should equal( Friends(TreeSet(s"akka.tcp://rootsCluster@$host:9013/user/roots"),Set[String]()) )
+
+			And("Tear down remaining nodes to clean up")
+			sel(9003) ! RootsStopMsg()
+			Thread.sleep(delay)
 		}
+		*/
 	}
 }
 
