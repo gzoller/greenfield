@@ -8,7 +8,8 @@ import akka.actor._
 trait Roots {
 	val version        = Version("roots:roots",BuildInfo.version)
 	val actor : Props  = Props(new RootsActor(this))
-	lazy val system    = digestConfig(actor)
+	final val system   = new SetOnce[ActorSystem]
+	// final val port     = new SetOnce[Int]
 
 	protected final val pod = new SetOnce[Pod]
 	def podVersion = 
@@ -23,11 +24,12 @@ trait Roots {
 	// All done for now... we just wait for Ecos to notify us with instructions to load a Pod.
 	// Meanwhile we can answer all events.
 
-	def digestConfig(a:Props) = {
-		val cfg      = ConfigFactory.load
-		val system   = ActorSystem( cfg.getString("cluster-name"), cfg )
-		system.actorOf( a, "roots" )
-		system
+	def init( cfg:Config ) = {
+		implicit val systemCred = system.allowAssignment 
+		// implicit val portCred   = port.allowAssignment 
+		system := ActorSystem( cfg.getString("cluster-name"), cfg )
+		system.actorOf( actor, "roots" )
+		// port := cfg.getInt("akka.remote.netty.tcp.port")
 	}
 
 	def setPod( p:Pod, lvs:List[Leaf] ) : Boolean = 

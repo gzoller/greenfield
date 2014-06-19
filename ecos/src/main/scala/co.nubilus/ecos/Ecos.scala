@@ -17,6 +17,7 @@ object Ecos extends App {
 		setPod(new EcosPod(), List(leaves.EcosLeafv1()))
 
 		override val actor = Props(new EcosRootsActor( pod.asInstanceOf[EcosPod], this ))
+		init( ConfigFactory.load() )
 	}
 	val server = EcosServer()
 

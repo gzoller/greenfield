@@ -24,7 +24,6 @@ import scala.collection.immutable.TreeSet
 //
 //  HTTP server			9090
 
-
 class RootsMultiJvmTests1 extends FunSpec with BeforeAndAfterAll with GivenWhenThen {
 
 	var t : Roots           = null
@@ -33,7 +32,7 @@ class RootsMultiJvmTests1 extends FunSpec with BeforeAndAfterAll with GivenWhenT
 	val cfg                 = ConfigFactory.parseString("akka.remote.netty.tcp.port = 9000").withFallback(ConfigFactory.load("testServer.conf"))
 	implicit val system     = ActorSystem( "test", cfg )
 
-	val delay               = 2700
+	val delay               = 5000
 
 	// Http server for things like jar service
 	val http = new HttpServer(system) 
@@ -46,8 +45,6 @@ class RootsMultiJvmTests1 extends FunSpec with BeforeAndAfterAll with GivenWhenT
 	private def selPod(port:Int)   = system.actorSelection(s"""akka.tcp://podNest@$host:$port/user/pod""")
 
 	override def beforeAll() {
-		// t = TestRootsPod1()
-		// selection = t.system.actorSelection( akkaUri )
 		Thread.sleep(3000)  // Allow time for all nodes/cluster to come up
 	}
 
@@ -60,7 +57,6 @@ class RootsMultiJvmTests1 extends FunSpec with BeforeAndAfterAll with GivenWhenT
 	}
 
 	describe("===============\n| Roots Tests |\n===============") {
-/*
 		it("Environment starts up and responds to ping") {
 			val reply = Await.result( sel(9001) ? "ping", 5.seconds )
 			reply should be("pong test")
@@ -90,7 +86,6 @@ class RootsMultiJvmTests1 extends FunSpec with BeforeAndAfterAll with GivenWhenT
 			When("A PodMsg is stent to it to load a test Pod")
 			val params = Map("$akkaPort"->"9021","$seedPort"->"9021","$httpPort"->"9031","$host"->host)
 			val cfg = Util.multiReplace( scala.io.Source.fromFile("ecos/src/test/resources/unit_cfg1.conf","utf-8").mkString, params)
-//			val cfg = scala.io.Source.fromFile("ecos/src/test/resources/unit_cfg1.conf","utf-8").mkString.replaceAllLiterally("$host",host)
 			selRoots(9011) ! PodMsg( Version("MyPod","1"), cfg )
 			Thread.sleep(delay)
 
@@ -106,12 +101,9 @@ class RootsMultiJvmTests1 extends FunSpec with BeforeAndAfterAll with GivenWhenT
 			sel(9001) ! RootsStopMsg()
 			Thread.sleep(delay)
 		}
-		*/
 		it("Successfully discovers new Roots node") {
 			Given("Start an Ecos node")
 			sel(9001) ! RootsStartMsg(9011, false) // run an ecos server
-			sel(9003) ! RootsStartMsg(9013, false) // run an ecos server
-			sel(9004) ! RootsStartMsg(9014, false) // run an ecos server
 			Thread.sleep(delay)
 
 			When("A Roots node is started")
@@ -128,7 +120,6 @@ class RootsMultiJvmTests1 extends FunSpec with BeforeAndAfterAll with GivenWhenT
 
 			// Leave these nodes up for next tests!
 		}
-		/*
 		it("Successfully discovers new ecos node") {
 			Given("Start annother Ecos node (in addition to one from last test)")
 			sel(9003) ! RootsStartMsg(9013, false) // run an ecos server
@@ -151,7 +142,7 @@ class RootsMultiJvmTests1 extends FunSpec with BeforeAndAfterAll with GivenWhenT
 		it("Successfully removes ecos node") {
 			Given("An Ecos node is stopped")
 			sel(9003) ! RootsStopMsg()
-			Thread.sleep(delay)
+			Thread.sleep(8000)
 
 			Then("Existing Roots node should be updated (only have one remaining Ecos node known to it)")
 			val reply = Await.result( selRoots(9012) ? WhoDoYouKnow(), 5.seconds )
@@ -163,22 +154,18 @@ class RootsMultiJvmTests1 extends FunSpec with BeforeAndAfterAll with GivenWhenT
 
 			// Leave these nodes up for next tests!
 		}
-		*/
-		/*
 		it("Successfully removes pod node") {
 			Given("A Pod node is stopped")
 			sel(9002) ! RootsStopMsg()
-			Thread.sleep(delay)
+			Thread.sleep(8000)
 
 			Then("Remaining Ecos node should be aware of the removal of an Pod node")
-			val reply2 = Await.result( selRoots(9013) ? WhoDoYouKnow(), 5.seconds )
-			reply2 should equal( Friends(TreeSet(s"akka.tcp://rootsCluster@$host:9013/user/roots"),Set[String]()) )
+			val reply2 = Await.result( selRoots(9011) ? WhoDoYouKnow(), 5.seconds )
+			reply2 should equal( Friends(TreeSet(s"akka.tcp://rootsCluster@$host:9011/user/roots"),Set[String]()) )
 
 			And("Tear down remaining nodes to clean up")
-			sel(9003) ! RootsStopMsg()
-			Thread.sleep(delay)
+			sel(9001) ! RootsStopMsg()
 		}
-		*/
 	}
 }
 
@@ -189,7 +176,7 @@ class RootsMultiJvmTests1 extends FunSpec with BeforeAndAfterAll with GivenWhenT
 class RootsMultiJvmTests2() extends FunSpec with TestServer with BeforeAndAfterAll{ 
 	val port : Int = 9001
 	describe("server") {
-		it("serves"){}
+		it("serves - Node 1 started"){}
 	}
 	override def afterAll() {
 		run
@@ -198,7 +185,7 @@ class RootsMultiJvmTests2() extends FunSpec with TestServer with BeforeAndAfterA
 class RootsMultiJvmTests3() extends FunSpec with TestServer with BeforeAndAfterAll{ 
 	val port : Int = 9002
 	describe("server") {
-		it("serves"){}
+		it("serves - Node 2 started"){}
 	}
 	override def afterAll() {
 		run
@@ -207,7 +194,7 @@ class RootsMultiJvmTests3() extends FunSpec with TestServer with BeforeAndAfterA
 class RootsMultiJvmTests4() extends FunSpec with TestServer with BeforeAndAfterAll{ 
 	val port : Int = 9003
 	describe("server") {
-		it("serves"){}
+		it("serves - Node 3 started"){}
 	}
 	override def afterAll() {
 		run
@@ -216,7 +203,7 @@ class RootsMultiJvmTests4() extends FunSpec with TestServer with BeforeAndAfterA
 class RootsMultiJvmTests5() extends FunSpec with TestServer with BeforeAndAfterAll{ 
 	val port : Int = 9004
 	describe("server") {
-		it("serves"){}
+		it("serves - Node 4 started"){}
 	}
 	override def afterAll() {
 		run

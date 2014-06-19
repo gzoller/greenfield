@@ -11,34 +11,25 @@ case class PodServer( p:Int, r:String ) extends TestServerWorker {
 
 	override val actor : Props = Props(new RootsTestActor(this))
 
-	// system has been defined as lazy in Roots to allow subclasses to define key vals and
-	// possibly override digestConfig.  Now we must force resolution of the lazy system so that
-	// the actor starts up.
-	val s = system 
-	Thread.sleep(1000)
+	init(cfg)
 }
 
 case class EcosServer( p:Int, r:String ) extends TestServerWorker { 
 	val port = p
 	val role = r
 	override val actor : Props = Props(new EcosTestActor(null,this))
-	val s = system 
-	Thread.sleep(1000)
+
+	init(cfg)
 }
 
 trait TestServerWorker extends Roots {
 	val port : Int
 	val role : String
 
-	override def digestConfig(a:Props) = {
-		val cfg = ConfigFactory.parseString(s"""
-			akka.remote.netty.tcp.port = $port
-			akka.cluster.roles =[ $role ]
-			""").withFallback(ConfigFactory.load("worker.conf"))
-		val system = ActorSystem( "rootsCluster", cfg )
-		system.actorOf( a, "roots" )
-		system
-	}
+	def cfg() = ConfigFactory.parseString(s"""
+		akka.remote.netty.tcp.port = $port
+		akka.cluster.roles =[ $role ]
+		""").withFallback(ConfigFactory.load("worker.conf"))
 }
 
 case class RootsStartMsg( port:Int, isPod:Boolean )
@@ -65,7 +56,6 @@ class TestServerActor( ts:TestServer ) extends Actor {
 		case "ping"                 => sender ! "pong test"
 
 		case tssm:TestServerStopMsg => 
-			println("Stopping "+ts.port)
 			ts.system.shutdown
 
 		case rsm:RootsStartMsg      =>
@@ -75,7 +65,8 @@ class TestServerActor( ts:TestServer ) extends Actor {
 				ts.roots = EcosServer(rsm.port, "ecos")
 
 		case rstp:RootsStopMsg      => 
-			println("Stop Roots on "+ts.port)
+			akka.cluster.Cluster(ts.roots.system).leave(Address("akka.tcp","rootsCluster", core.Util.myHost, ts.roots.asInstanceOf[TestServerWorker].port))
+			Thread.sleep(2000)
 			ts.roots.system.shutdown
 
 		case other => println("Other: "+other)
